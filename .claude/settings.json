@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ANDROID_HOME=~/Library/Android/sdk ./gradlew assembleRelease)",
+      "Bash(npx eas-cli:*)",
+      "Bash(npx eas-cli@latest whoami)",
+      "Bash(npx eas-cli@latest init --non-interactive)",
+      "Bash(npx eas-cli@latest init --non-interactive --force)",
+      "Bash(ANDROID_HOME=~/Library/Android/sdk npx expo prebuild --platform android --clean)",
+      "Bash(npx eas-cli@latest update --branch preview --message \"test ota\" --non-interactive)",
+      "Bash(npx eas-cli@latest update --branch preview --message \"test ota\" --environment preview --non-interactive)",
+      "Bash(xargs cat:*)",
+      "Bash(grep -n \"setQuoteModal\\\\|openQuote\" /Users/ihebnachet/Desktop/myApp/src/screens/*.js)",
+      "Bash(grep -v \"quotes\\\\|ads\\\\|settings\\\\|tasks\\\\|products\" find /Users/ihebnachet/Desktop/emballage.tn/apps/api/src/modules/users -type f)",
+      "Read(//Users/ihebnachet/Desktop/nestjs-admin/apps/api/src/**)",
+      "Read(//Users/ihebnachet/Desktop/nestjs-admin/apps/web/src/features/orders/components/**)",
+      "Read(//Users/ihebnachet/Desktop/nestjs-admin/apps/web/src/lib/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/api/src/modules/orders/entities",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/api/src/modules/orders/dto",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/api/src/modules/orders",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/api/src/modules/quotes/entities",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/api/src/modules/quotes",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/web/src/features/quotes/data",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/web/src/features/quotes/components",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/api/src/modules/users",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/web/src/features/users/components",
+      "/Users/ihebnachet/Desktop/nestjs-admin/apps/api/src/modules/orders/entities",
+      "/Users/ihebnachet/Desktop/nestjs-admin/apps/web/src/features/orders/components",
+      "/Users/ihebnachet/Desktop/nestjs-admin/apps/api/src/modules/orders"
+    ]
+  }
+}
