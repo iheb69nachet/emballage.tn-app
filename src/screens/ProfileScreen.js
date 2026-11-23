@@ -1,11 +1,16 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput,
-  Modal, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { useState, useEffect } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity, TextInput, Modal, KeyboardAvoidingView, Platform, ActivityIndicator,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { T } from '../constants/theme';
 import { useR } from '../hooks/useR';
 import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../stores/authStore';
+import * as api from '../services/api';
+import { showAlert } from '../services/dialog';
+import AppDialog from '../components/AppDialog';
+import { TAX_ID_EXAMPLE, TAX_ID_HINT, isTunisianTaxId } from '../constants/taxId';
 
 const INFO_ROWS = [
   { icon: '✉️', label: 'EMAIL',  key: 'email' },
@@ -17,16 +22,36 @@ const INFO_ROWS = [
 function EditModal({ visible, user, onClose, onSave }) {
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName]   = useState(user?.lastName  || '');
+  const [companyName, setCompanyName] = useState(user?.companyName || '');
+  const [taxId, setTaxId] = useState(user?.taxId || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Re-seed when the sheet reopens on a profile refreshed from the server
+  useEffect(() => {
+    if (!visible) return;
+    setFirstName(user?.firstName || '');
+    setLastName(user?.lastName || '');
+    setCompanyName(user?.companyName || '');
+    setTaxId(user?.taxId || '');
+    setError('');
+  }, [visible, user]);
+
+  const taxIdInvalid = taxId.trim() !== '' && !isTunisianTaxId(taxId);
 
   const handleSave = async () => {
     if (!firstName.trim() || !lastName.trim()) {
       setError('Prénom et nom requis.'); return;
     }
+    if (taxIdInvalid) { setError(TAX_ID_HINT); return; }
     setError(''); setLoading(true);
     try {
-      await onSave({ firstName: firstName.trim(), lastName: lastName.trim() });
+      await onSave({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        companyName: companyName.trim(),
+        taxId: taxId.trim(),
+      });
       onClose();
     } catch (e) {
       setError(e?.message || 'Erreur lors de la mise à jour.');
@@ -79,6 +104,26 @@ function EditModal({ visible, user, onClose, onSave }) {
               value={lastName} onChangeText={setLastName} />
           </View>
 
+          <View style={inputRow}>
+            <Text style={{ fontSize: 18, width: 22, textAlign: 'center' }}>🏢</Text>
+            <View style={{ width: 1, height: 20, backgroundColor: T.border }} />
+            <TextInput style={{ flex: 1, fontSize: 14, color: T.text }}
+              placeholder="Raison sociale (optionnel)" placeholderTextColor={T.muted}
+              value={companyName} onChangeText={setCompanyName} autoCapitalize="words" />
+          </View>
+
+          <View style={[inputRow, taxIdInvalid && { borderColor: T.danger }]}>
+            <Text style={{ fontSize: 18, width: 22, textAlign: 'center' }}>🧾</Text>
+            <View style={{ width: 1, height: 20, backgroundColor: T.border }} />
+            <TextInput style={{ flex: 1, fontSize: 14, color: T.text }}
+              placeholder={`Matricule fiscal — ${TAX_ID_EXAMPLE}`} placeholderTextColor={T.muted}
+              value={taxId} onChangeText={setTaxId}
+              autoCapitalize="characters" autoCorrect={false} />
+          </View>
+          <Text style={{ fontSize: 11, color: T.muted, marginTop: -6, marginBottom: 12, lineHeight: 16 }}>
+            Raison sociale et matricule fiscal apparaissent sur vos factures et devis.
+          </Text>
+
           {error ? (
             <View style={{
               backgroundColor: '#FEF2F2', borderRadius: 12, padding: 10,
@@ -109,6 +154,7 @@ function EditModal({ visible, user, onClose, onSave }) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      <AppDialog nested />
     </Modal>
   );
 }
@@ -119,6 +165,33 @@ export default function ProfileScreen() {
   const { showToast } = useApp();
   const { user, logout, updateUser } = useAuthStore();
   const [editVisible, setEditVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDeleteAccount = () => {
+    showAlert(
+      'Supprimer mon compte',
+      'Votre compte sera désactivé et vous serez déconnecté. Vous ne pourrez plus vous connecter avec ce compte. Cette action est irréversible depuis l\'application.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await api.users.deleteAccount();
+              showToast('Compte supprimé');
+              await logout();
+            } catch (e) {
+              showToast('Échec de la suppression. Réessayez.');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const displayName = user
     ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
@@ -210,6 +283,61 @@ export default function ProfileScreen() {
               ))}
 
               <View style={{ gap: 10, marginTop: 16 }}>
+                {/* Fidelity */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Fidelity')}
+                  activeOpacity={0.8}
+                  style={{
+                    backgroundColor: T.primary, borderRadius: 16, padding: 16,
+                    flexDirection: 'row', alignItems: 'center', gap: 14,
+                    shadowColor: T.primary, shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.25, shadowRadius: 10, elevation: 5,
+                  }}>
+                  <View style={{
+                    width: 44, height: 44, borderRadius: 13,
+                    backgroundColor: T.accent,
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Text style={{ fontSize: 22 }}>⭐</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: '800', fontSize: 14, color: '#FFF' }}>
+                      Programme de fidélité
+                    </Text>
+                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>
+                      Voir vos points et récompenses
+                    </Text>
+                  </View>
+                  <Text style={{ color: T.accent, fontSize: 18 }}>›</Text>
+                </TouchableOpacity>
+
+                {/* Factures */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Factures')}
+                  activeOpacity={0.8}
+                  style={{
+                    backgroundColor: '#FFF', borderRadius: 16, padding: 16,
+                    flexDirection: 'row', alignItems: 'center', gap: 14,
+                    borderWidth: 1.5, borderColor: T.primary + '30',
+                  }}>
+                  <View style={{
+                    width: 44, height: 44, borderRadius: 13,
+                    backgroundColor: T.primary + '10',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Text style={{ fontSize: 20 }}>🧾</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: '700', fontSize: 14, color: T.primary }}>
+                      Mes factures
+                    </Text>
+                    <Text style={{ fontSize: 12, color: T.muted, marginTop: 1 }}>
+                      Consulter les factures de vos commandes
+                    </Text>
+                  </View>
+                  <Text style={{ color: T.primary, fontSize: 16 }}>›</Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity
                   onPress={() => setEditVisible(true)}
                   activeOpacity={0.8}
@@ -250,6 +378,37 @@ export default function ProfileScreen() {
                     Se déconnecter
                   </Text>
                   <Text style={{ color: T.danger + '60', fontSize: 16 }}>›</Text>
+                </TouchableOpacity>
+
+                {/* Delete account (App Store Guideline 5.1.1(v)) */}
+                <TouchableOpacity
+                  onPress={confirmDeleteAccount}
+                  disabled={deleting}
+                  activeOpacity={0.8}
+                  style={{
+                    backgroundColor: T.danger + '08', borderRadius: 16, padding: 16,
+                    flexDirection: 'row', alignItems: 'center', gap: 14,
+                    borderWidth: 1.5, borderColor: T.danger + '40',
+                    opacity: deleting ? 0.5 : 1,
+                  }}>
+                  <View style={{
+                    width: 44, height: 44, borderRadius: 13,
+                    backgroundColor: T.danger + '15',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Text style={{ fontSize: 20 }}>🗑️</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: '700', fontSize: 14, color: T.danger }}>
+                      Supprimer mon compte
+                    </Text>
+                    <Text style={{ fontSize: 12, color: T.muted, marginTop: 1 }}>
+                      Désactive définitivement votre compte
+                    </Text>
+                  </View>
+                  {deleting
+                    ? <ActivityIndicator color={T.danger} size="small" />
+                    : <Text style={{ color: T.danger + '60', fontSize: 16 }}>›</Text>}
                 </TouchableOpacity>
               </View>
             </>

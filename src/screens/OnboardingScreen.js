@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Dimensions, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { T } from '../constants/theme';
+import { useAuthStore } from '../stores/authStore';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +32,7 @@ const SLIDES = [
 
 export default function OnboardingScreen() {
   const navigation = useNavigation();
+  const markOnboardingSeen = useAuthStore(s => s.markOnboardingSeen);
   const scrollRef = useRef(null);
   const [current, setCurrent] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -44,11 +46,16 @@ export default function OnboardingScreen() {
     setCurrent(index);
   };
 
+  const finish = async () => {
+    await markOnboardingSeen();
+    navigation.navigate('Login');
+  };
+
   const handleNext = () => {
     if (current < SLIDES.length - 1) {
       goTo(current + 1);
     } else {
-      navigation.navigate('App');
+      finish();
     }
   };
 
@@ -132,7 +139,7 @@ export default function OnboardingScreen() {
 
         {/* Skip */}
         {current < SLIDES.length - 1 && (
-          <TouchableOpacity onPress={() => navigation.navigate('App')}
+          <TouchableOpacity onPress={finish}
             style={{ marginTop: 14, paddingVertical: 8, alignItems: 'center' }}>
             <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>Passer</Text>
           </TouchableOpacity>

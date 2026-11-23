@@ -5,6 +5,8 @@ import { T } from '../constants/theme';
 import { useAuthStore } from '../stores/authStore';
 import * as api from '../services/api';
 import Btn from '../components/Btn';
+import AppleSignInButton from '../components/AppleSignInButton';
+import { useGoogleAuth } from '../hooks/useGoogleAuth';
 
 function Field({ icon, ...props }) {
   return (
@@ -57,6 +59,39 @@ export default function RegisterScreen({ navigation }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const handleGoogleSuccess = async (idToken) => {
+    setLoading(true);
+    setError('');
+    try {
+      const { accessToken, user } = await api.auth.googleLogin(idToken);
+      await loginWithToken(accessToken, user);
+      navigation.navigate('App');
+    } catch (e) {
+      setError('Connexion Google échouée. Réessayez.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const { promptAsync: googlePrompt, ready: googleReady } = useGoogleAuth({
+    onSuccess: handleGoogleSuccess,
+    onError: () => setError('Connexion Google échouée. Réessayez.'),
+  });
+
+  const handleAppleSuccess = async (identityToken, fullName) => {
+    setLoading(true);
+    setError('');
+    try {
+      const { accessToken, user } = await api.auth.appleLogin(identityToken, fullName);
+      await loginWithToken(accessToken, user);
+      navigation.navigate('App');
+    } catch (e) {
+      setError(e.message || 'Connexion Apple échouée. Réessayez.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleRegister = async () => {
@@ -92,6 +127,7 @@ export default function RegisterScreen({ navigation }) {
       // verifyOtp returns { accessToken, user } directly
       const { accessToken, user } = await api.auth.verifyOtp(form.email.trim(), otp.trim());
       await loginWithToken(accessToken, user);
+      navigation.navigate('App');
     } catch (e) {
       setError(e?.message || 'Code invalide ou expiré.');
     } finally {
@@ -233,8 +269,40 @@ export default function RegisterScreen({ navigation }) {
           <Btn label="Continuer →" bg={T.primary} size="lg" onPress={handleRegister} />
         )}
 
+        {/* Divider */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 10 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: T.border }} />
+          <Text style={{ color: T.muted, fontSize: 12 }}>ou</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: T.border }} />
+        </View>
+
+        {/* Google sign-up */}
+        <TouchableOpacity
+          onPress={() => googlePrompt()}
+          disabled={!googleReady || loading}
+          activeOpacity={0.8}
+          style={{
+            marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: '#FFF', borderRadius: 14, height: 52, gap: 10,
+            borderWidth: 1.5, borderColor: T.border,
+            opacity: !googleReady || loading ? 0.5 : 1,
+          }}>
+          <Text style={{ fontSize: 20 }}>G</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: T.text }}>
+            S'inscrire avec Google
+          </Text>
+        </TouchableOpacity>
+
+        {/* Sign up with Apple (iOS only) */}
+        <AppleSignInButton
+          type="signUp"
+          disabled={loading}
+          onSuccess={handleAppleSuccess}
+          onError={() => setError('Connexion Apple échouée. Réessayez.')}
+        />
+
         <TouchableOpacity onPress={() => navigation.goBack()}
-          style={{ marginTop: 22, paddingVertical: 8 }}>
+          style={{ marginTop: 16, paddingVertical: 8 }}>
           <Text style={{ textAlign: 'center', color: T.muted, fontSize: 14 }}>
             Déjà un compte ?{' '}
             <Text style={{ color: T.primary, fontWeight: '700' }}>Se connecter</Text>

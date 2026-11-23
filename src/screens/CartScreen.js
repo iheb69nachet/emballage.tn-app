@@ -1,15 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { T } from '../constants/theme';
 import { useR } from '../hooks/useR';
 import { useApp } from '../context/AppContext';
 import Btn from '../components/Btn';
+import * as api from '../services/api';
+import { usePolling } from '../hooks/usePolling';
 
 export default function CartScreen() {
   const navigation = useNavigation();
   const r = useR();
   const { cart, removeFromCart, updateQty, cartCount, cartTotal, openQuoteWithItems, authToken } = useApp();
+  // Droit de timbre set in the admin (Société); 1 DT until it loads, like the API default
+  const [stampDuty, setStampDuty] = useState(1);
+  usePolling(() => {
+    api.settings.company().then(c => setStampDuty(Number(c?.stampDuty) || 0)).catch(() => {});
+  }, 60000);
   const goLogin = () => navigation.getParent('Root')?.navigate('Login');
 
   return (
@@ -129,7 +136,11 @@ export default function CartScreen() {
             shadowColor: T.primary, shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
           }}>
-            {[['Sous-total HT', cartTotal], ['TVA (19%)', cartTotal * 0.19]].map(([l, v]) => (
+            {[
+              ['Sous-total HT', cartTotal],
+              ['TVA (19%)', cartTotal * 0.19],
+              ...(stampDuty > 0 ? [['Droit de timbre', stampDuty]] : []),
+            ].map(([l, v]) => (
               <View key={l} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
                 <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>{l}</Text>
                 <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>
@@ -141,7 +152,7 @@ export default function CartScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 16 }}>Total TTC</Text>
               <Text style={{ color: T.accent, fontWeight: '900', fontSize: 26 }}>
-                {(cartTotal * 1.19).toFixed(3)}
+                {(cartTotal * 1.19 + stampDuty).toFixed(3)}
                 <Text style={{ fontSize: 14, fontWeight: '700' }}> TND</Text>
               </Text>
             </View>

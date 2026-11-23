@@ -1,13 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { T } from '../constants/theme';
 import { useR } from '../hooks/useR';
 import { useApp } from '../context/AppContext';
 import * as api from '../services/api';
+import { usePolling } from '../hooks/usePolling';
 import AdBanner from '../components/AdBanner';
 import ProdCard from '../components/ProdCard';
 import Btn from '../components/Btn';
+
+/** Discount % of a bundle — stored on the API, derived from prices as a fallback. */
+const bundlePct = (b) => {
+  const d = Number(b.discount);
+  if (d > 0) return Math.round(d);
+  const orig = Number(b.originalPrice), price = Number(b.price);
+  return orig > 0 && price >= 0 ? Math.round((1 - price / orig) * 100) : 0;
+};
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -18,12 +27,15 @@ export default function HomeScreen() {
   const [bundles, setBundles] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // Polled so product / pack changes made in the admin show up without a restart.
+  // Only the first load reports errors — background refreshes stay silent.
+  const loaded = useRef(false);
+  usePolling(() => {
     Promise.all([api.products.list(), api.bundles.list()])
-      .then(([p, b]) => { setProducts(p); setBundles(b); })
-      .catch(() => showToast('Erreur de chargement'))
+      .then(([p, b]) => { setProducts(p); setBundles(b); loaded.current = true; })
+      .catch((err) => { if (!loaded.current) showToast(err?.response?.data?.message || err?.message || 'Erreur de chargement'); })
       .finally(() => setLoading(false));
-  }, []);
+  }, 30000);
 
   if (loading) {
     return (
@@ -119,7 +131,7 @@ export default function HomeScreen() {
                 <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 13 }}>{b.badge}</Text>
                 <View style={{ backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 8,
                   paddingHorizontal: 10, paddingVertical: 3 }}>
-                  <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>-{b.pct}%</Text>
+                  <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>-{bundlePct(b)}%</Text>
                 </View>
               </View>
               <View style={{ padding: 16 }}>

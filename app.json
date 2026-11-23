@@ -1,54 +1,81 @@
 {
   "expo": {
-    "name": "myApp",
-    "slug": "myApp",
-    "version": "1.0.0",
+    "name": "emballage.tn",
+    "slug": "emballagetn",
+    "scheme": "sky.app.emballage",
+    "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "updates": {
-      "url": "https://u.expo.dev/650f7b21-3677-4921-9769-47cece705e9a",
-      "checkAutomatically": "ON_LOAD",
+      "url": "https://u.expo.dev/cc42f986-4880-46a0-b720-caaa61ba920b",
+      "checkAutomatically": "ON_ERROR_RECOVERY",
       "fallbackToCacheTimeout": 0
     },
-    "runtimeVersion": "1.0.0",
+    "runtimeVersion": "1.5.0",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "sky.app.emballage",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
     },
     "android": {
-      "package": "tn.emballage.app",
-      "versionCode": 1,
-      "usesCleartextTraffic": true,
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      "package": "sky.app.emballage",
+      "versionCode": 2,
+      "icon": "./assets/icon.png"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "owner": "inachet33-2-2",
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1E6B4C",
+          "sounds": []
+        }
+      ],
+      "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "L'application accède à vos photos pour illustrer les articles.",
+          "cameraPermission": "L'application utilise la caméra pour photographier les articles."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "L'application utilise votre position pour localiser le point de livraison.",
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ]
+    ],
     "extra": {
       "eas": {
-        "projectId": "650f7b21-3677-4921-9769-47cece705e9a"
-      }
-    },
-    "owner": "inachet33-2-2",
-"plugins": [
-  [
-    "expo-build-properties",
-    {
-      "android": {
-        "usesCleartextTraffic": true
+        "projectId": "cc42f986-4880-46a0-b720-caaa61ba920b"
       }
     }
-  ]
-]
   }
 }

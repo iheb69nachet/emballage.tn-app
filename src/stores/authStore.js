@@ -4,22 +4,33 @@ import * as api from '../services/api';
 
 const TOKEN_KEY = '@auth_token';
 const USER_KEY = '@auth_user';
+const ONBOARDING_KEY = '@onboarding_seen';
 
 export const useAuthStore = create((set) => ({
   token: null,
   user: null,
   hydrated: false,
+  hasSeenOnboarding: false,
 
   hydrate: async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
-      const userJson = await AsyncStorage.getItem(USER_KEY);
+      const [token, userJson, onboardingSeen] = await Promise.all([
+        AsyncStorage.getItem(TOKEN_KEY),
+        AsyncStorage.getItem(USER_KEY),
+        AsyncStorage.getItem(ONBOARDING_KEY),
+      ]);
       if (token) {
         api.setAuthToken(token);
         set({ token, user: userJson ? JSON.parse(userJson) : null });
       }
+      set({ hasSeenOnboarding: !!onboardingSeen });
     } catch (_) {}
     set({ hydrated: true });
+  },
+
+  markOnboardingSeen: async () => {
+    await AsyncStorage.setItem(ONBOARDING_KEY, '1');
+    set({ hasSeenOnboarding: true });
   },
 
   login: async (email, password) => {
@@ -31,7 +42,6 @@ export const useAuthStore = create((set) => ({
     return user;
   },
 
-  // Called after OTP verification which returns a token directly
   loginWithToken: async (accessToken, user) => {
     api.setAuthToken(accessToken);
     await AsyncStorage.setItem(TOKEN_KEY, accessToken);
