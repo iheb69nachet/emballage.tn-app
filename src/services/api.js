@@ -10,11 +10,24 @@ export function clearAuthToken() {
   authToken = null;
 }
 
+let onUnauthorized = null;
+
+/** Called when the server rejects the session token (expired / revoked). */
+export function setUnauthorizedHandler(handler) {
+  onUnauthorized = handler;
+}
+
 async function request(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...options.headers };
-  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const sentToken = authToken;
+  if (sentToken) headers['Authorization'] = `Bearer ${sentToken}`;
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  // Only a request that carried the current session counts. The public /auth/*
+  // routes answer 401 for a wrong password or social token too, which must not
+  // sign anybody out — /auth/me is the one that checks the session itself.
+  const sessionCheck = !path.startsWith('/auth/') || path === '/auth/me';
+  if (res.status === 401 && sessionCheck && sentToken && sentToken === authToken) onUnauthorized?.();
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Network error' }));
     throw new Error(err.message || `HTTP ${res.status}`);
@@ -177,8 +190,12 @@ export const admin = {
   orders: {
     list: () => request('/orders/admin/all'),
     get: (id) => request(`/orders/${id}`),
-    updateStatus: (id, status) =>
-      request(`/orders/admin/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+    /** cancellationReason is required when status is 'Annulé' — the client reads it in the app. */
+    updateStatus: (id, status, cancellationReason) =>
+      request(`/orders/admin/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, ...(cancellationReason ? { cancellationReason } : {}) }),
+      }),
     /**
      * Approve the payment — which confirms the order, unlocks its facture and
      * deducts the stock. The method is never sent: it stays the one the client
