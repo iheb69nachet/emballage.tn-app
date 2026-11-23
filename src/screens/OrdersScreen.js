@@ -160,6 +160,17 @@ export default function OrdersScreen() {
               </Text>
             </View>
 
+            {/* Why the order was cancelled — written by our team when cancelling */}
+            {o.status === 'Annulé' && o.cancellationReason ? (
+              <View style={{
+                marginHorizontal: 18, marginBottom: 14, padding: 12, borderRadius: 12,
+                backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
+              }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#DC2626', letterSpacing: 1 }}>MOTIF D'ANNULATION</Text>
+                <Text style={{ fontSize: 13, color: T.text, marginTop: 4, lineHeight: 19 }}>{o.cancellationReason}</Text>
+              </View>
+            ) : null}
+
             {/* Amount breakdown — the client sees exactly what was added on top */}
             {(() => {
               const a = amountLines(o);

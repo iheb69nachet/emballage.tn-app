@@ -317,6 +317,85 @@ function InvoiceEditor({ order, onClose, onSaved }) {
   );
 }
 
+/**
+ * Cancelling an order always asks for a reason: the client reads it on the
+ * order in the app and in the cancellation notification.
+ */
+function CancelOrderModal({ order, onClose, onCancelled }) {
+  const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async () => {
+    const clean = reason.trim();
+    if (!clean) return setError("Indiquez le motif d'annulation.");
+    setError(''); setSaving(true);
+    try {
+      await api.admin.orders.updateStatus(order.id, 'Annulé', clean);
+      onCancelled(clean);
+      onClose();
+    } catch (e) {
+      setError(e.message || 'Annulation impossible');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={() => !saving && onClose()}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: T.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, maxHeight: '86%' }}>
+            <View style={{ padding: 18, borderBottomWidth: 1, borderBottomColor: T.border, backgroundColor: '#FFF', borderTopLeftRadius: 22, borderTopRightRadius: 22 }}>
+              <Text style={{ fontSize: 17, fontWeight: '900', color: T.text }}>Annuler la commande</Text>
+              <Text style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>
+                Commande {order.orderNumber} · {fmt(Number(order.total) || 0)} TND
+              </Text>
+            </View>
+
+            <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 28 }} keyboardShouldPersistTaps="handled">
+              <Text style={{ fontSize: 11, fontWeight: '800', color: T.muted, letterSpacing: 1.2, marginBottom: 8 }}>
+                MOTIF D'ANNULATION *
+              </Text>
+              <TextInput
+                value={reason}
+                onChangeText={setReason}
+                placeholder="Saisir le motif…"
+                placeholderTextColor={T.muted}
+                multiline
+                autoFocus
+                maxLength={500}
+                style={{
+                  minHeight: 90, textAlignVertical: 'top', backgroundColor: '#FFF', borderRadius: 12,
+                  borderWidth: 1.5, borderColor: T.border, padding: 12, fontSize: 14, color: T.text,
+                }}
+              />
+              <Text style={{ fontSize: 11, color: T.muted, lineHeight: 17, marginTop: 6, marginBottom: 12 }}>
+                Ce message sera visible par le client dans l'application.
+              </Text>
+
+              {error ? (
+                <View style={{ backgroundColor: '#FEF2F2', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#FECACA' }}>
+                  <Text style={{ color: '#DC2626', fontSize: 13, lineHeight: 19 }}>⚠️ {error}</Text>
+                </View>
+              ) : null}
+
+              <TouchableOpacity onPress={submit} disabled={saving || !reason.trim()} activeOpacity={0.8}
+                style={{ backgroundColor: '#ef4444', borderRadius: 14, paddingVertical: 15, alignItems: 'center', opacity: saving || !reason.trim() ? 0.5 : 1 }}>
+                {saving ? <ActivityIndicator color="#FFF" />
+                  : <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 15 }}>Confirmer l'annulation</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onClose} disabled={saving} style={{ paddingVertical: 14, alignItems: 'center' }}>
+                <Text style={{ fontSize: 13, color: T.muted, fontWeight: '600' }}>Retour</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+      <AppDialog nested />
+    </Modal>
+  );
+}
+
 export default function AdminOrdersScreen({ route }) {
   const r = useR();
   const { authToken, user } = useApp();
@@ -330,6 +409,7 @@ export default function AdminOrdersScreen({ route }) {
   const [invoiceOrder, setInvoiceOrder] = useState(null); // order being invoiced (modal)
 
   const [validateOrder, setValidateOrder] = useState(null); // order awaiting payment approval
+  const [cancelOrder, setCancelOrder] = useState(null); // order being cancelled (reason modal)
   const [paymentMethods, setPaymentMethods] = useState([]);
 
   const fetchOrders = useCallback(async () => {
@@ -373,6 +453,10 @@ export default function AdminOrdersScreen({ route }) {
         'Paiement à valider',
         `Le paiement de cette commande (${paymentName(order)}) doit d'abord être validé. Seule l'annulation est possible avant validation.`,
       );
+      return;
+    }
+    if (newStatus === 'Annulé') {
+      setCancelOrder(order);
       return;
     }
     showAlert(
@@ -877,6 +961,14 @@ export default function AdminOrdersScreen({ route }) {
                       </View>
                     )}
 
+                    {/* Cancellation reason (shown to the client too) */}
+                    {o.status === 'Annulé' && o.cancellationReason ? (
+                      <View style={{ backgroundColor: '#FEF2F2', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#FECACA' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#DC2626', letterSpacing: 1 }}>MOTIF D'ANNULATION</Text>
+                        <Text style={{ fontSize: 13, color: T.text, marginTop: 4, lineHeight: 19 }}>{o.cancellationReason}</Text>
+                      </View>
+                    ) : null}
+
                     {/* Notes */}
                     {o.notes && (
                       <View>
@@ -901,6 +993,17 @@ export default function AdminOrdersScreen({ route }) {
             setOrders(prev => prev.map(o => (o.id === validateOrder.id ? { ...o, ...updated } : o)));
           }}
 
+        />
+      )}
+
+      {cancelOrder && (
+        <CancelOrderModal
+          order={cancelOrder}
+          onClose={() => setCancelOrder(null)}
+          onCancelled={(reason) => {
+            setOrders(prev => prev.map(o => o.id === cancelOrder.id
+              ? { ...o, status: 'Annulé', cancellationReason: reason } : o));
+          }}
         />
       )}
 
