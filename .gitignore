@@ -39,3 +39,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# build artifacts and test-lab dumps
+*.aab
+*.apk
+screenshots/
+assets/AppIcons.zip

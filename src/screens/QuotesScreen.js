@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { usePolling } from '../hooks/usePolling';
 import { useCallback } from 'react';
 import { T } from '../constants/theme';
 import { useR } from '../hooks/useR';
@@ -8,12 +9,18 @@ import { useApp } from '../context/AppContext';
 import * as api from '../services/api';
 import Badge from '../components/Badge';
 import Btn from '../components/Btn';
+import { openQuote } from '../services/documents';
 
 const STATUS_META = {
   'En attente':   { icon: '⏳', color: '#F59E0B' },
   'Prix proposé': { icon: '💰', color: '#10B981' },
+  'Accepté':      { icon: '✅', color: '#16A34A' },
+  'Refusé':       { icon: '❌', color: '#DC2626' },
   'Expiré':       { icon: '📅', color: '#6B7280' },
 };
+
+/** An offer past its validity date can no longer be answered. */
+const expiredOffer = (q) => !!q.validUntil && new Date(q.validUntil).getTime() < Date.now();
 
 export default function QuotesScreen() {
   const navigation = useNavigation();
@@ -24,13 +31,14 @@ export default function QuotesScreen() {
 
   const loadQuotes = useCallback(() => {
     if (!authToken) { setLoading(false); return; }
-    setLoading(true);
     api.quotes.list()
       .then(setQuotes)
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, [authToken]);
 
-  useFocusEffect(loadQuotes);
+  // On focus, every 30s while visible, and when the app returns to the foreground
+  usePolling(loadQuotes, 30000);
 
   if (loading) {
     return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -112,15 +120,20 @@ export default function QuotesScreen() {
           const discount = Number(q.discount ?? 0);
           const finalPrice = total * (1 - discount / 100);
           const hasOffer = q.status === 'Prix proposé' && total > 0;
+          const answered = q.status === 'Accepté' || q.status === 'Refusé';
+
+          const awaitingAnswer = hasOffer && !expiredOffer(q);
 
           return (
-            <View key={q.id} style={{
-              backgroundColor: '#FFF', borderRadius: 20,
-              marginBottom: 12, overflow: 'hidden',
-              borderWidth: 1, borderColor: hasOffer ? '#10B981' + '40' : T.border,
-              shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.06, shadowRadius: 8,
-            }}>
+            <TouchableOpacity key={q.id} activeOpacity={0.85}
+              onPress={() => navigation.navigate('QuoteDetail', { quoteId: q.id, quote: q })}
+              style={{
+                backgroundColor: '#FFF', borderRadius: 20,
+                marginBottom: 12, overflow: 'hidden',
+                borderWidth: 1, borderColor: awaitingAnswer ? '#10B981' + '40' : T.border,
+                shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.06, shadowRadius: 8,
+              }}>
               {/* Header */}
               <View style={{
                 paddingHorizontal: 18, paddingVertical: 14,
@@ -148,7 +161,7 @@ export default function QuotesScreen() {
 
               {/* Body */}
               <View style={{ paddingHorizontal: 18, paddingVertical: 14 }}>
-                {q.validUntil && (
+                {q.validUntil && !answered && (
                   <View style={{
                     flexDirection: 'row', alignItems: 'center', gap: 6,
                     backgroundColor: '#FFF8E1', borderRadius: 10,
@@ -200,14 +213,53 @@ export default function QuotesScreen() {
                       </Text>
                     </View>
                   </View>
+                ) : answered ? (
+                  <View style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 8,
+                    backgroundColor: q.status === 'Accepté' ? '#F0FDF4' : '#FEF2F2',
+                    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+                    borderWidth: 1, borderColor: q.status === 'Accepté' ? '#BBF7D0' : '#FECACA',
+                  }}>
+                    <Text style={{ fontSize: 14 }}>{q.status === 'Accepté' ? '✅' : '❌'}</Text>
+                    <Text style={{ flex: 1, fontSize: 12, fontWeight: '600', color: q.status === 'Accepté' ? '#166534' : '#B91C1C' }} numberOfLines={2}>
+                      {q.status === 'Accepté'
+                        ? `Offre acceptée${q.orderNumber ? ` · commande ${q.orderNumber}` : ''}`
+                        : `Offre refusée${q.declineReason ? ` · ${q.declineReason}` : ''}`}
+                    </Text>
+                  </View>
                 ) : (
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={{ fontSize: 13, color: T.muted, fontWeight: '600' }}>En cours d'évaluation</Text>
                     <Text style={{ fontSize: 13, color: T.muted }}>—</Text>
                   </View>
                 )}
+
+                {/* Call to action */}
+                <View style={{
+                  marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: T.border,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                  <Text style={{ fontSize: 12, color: T.muted }}>
+                    {q.items?.length ? `${q.items.length} article${q.items.length > 1 ? 's' : ''}` : 'Voir le détail'}
+                  </Text>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: awaitingAnswer ? '#166534' : T.primary }}>
+                    {awaitingAnswer ? 'Répondre à l\u2019offre  ›' : 'Voir le détail  ›'}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => openQuote(q.id)}
+                  activeOpacity={0.8}
+                  style={{
+                    marginTop: 10, borderRadius: 12, paddingVertical: 11, alignItems: 'center',
+                    backgroundColor: T.primary + '10', borderWidth: 1, borderColor: T.primary + '50',
+                  }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: T.primary }}>
+                    🖨️ Voir / imprimer le devis
+                  </Text>
+                </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </ScrollView>

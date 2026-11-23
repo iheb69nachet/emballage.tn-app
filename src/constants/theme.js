@@ -5,6 +5,7 @@ export const T = {
 };
 
 export const statusColor = s =>
-  ['Livré', 'Disponible', 'Accepté', 'Prix proposé'].includes(s) ? T.success :
-  ['En cours', 'En attente', 'Sur commande'].includes(s) ? T.warning :
+  ['Livré', 'Disponible', 'En stock', 'Accepté', 'Prix proposé'].includes(s) ? T.success :
+  ['En cours', 'En attente', 'Sur commande', 'Stock limité'].includes(s) ? T.warning :
+  ['Refusé', 'Annulé', 'Rupture'].includes(s) ? T.danger :
   s === 'En transit' ? T.info : s === 'Expiré' ? T.muted : T.muted;

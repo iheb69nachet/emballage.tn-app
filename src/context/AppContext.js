@@ -31,7 +31,7 @@ export function AppProvider({ children }) {
       .map(i => i.id === id ? { ...i, qty: Math.max(1, i.qty + delta) } : i)
     );
 
-  const placeOrder = async (address) => {
+  const placeOrder = async (address, paymentMethod = 'a_la_livraison', coords = null, deliveryMode = 'livraison') => {
     const items = cart.map(i => ({
       id: i.id,
       name: i.name,
@@ -40,7 +40,7 @@ export function AppProvider({ children }) {
       unit: i.unit || 'pièce',
     }));
     if (authToken) {
-      await api.orders.create(items, address);
+      await api.orders.create(items, address, paymentMethod, coords, deliveryMode);
     }
     setCart([]);
     showToast('Commande passée ! 🎉');

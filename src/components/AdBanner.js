@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useR } from '../hooks/useR';
 import * as api from '../services/api';
+import { usePolling } from '../hooks/usePolling';
 
 export default function AdBanner() {
   const r = useR();
   const [ads, setAds] = useState([]);
   const [idx, setIdx] = useState(0);
 
-  useEffect(() => {
-    api.ads.list().then(setAds);
-  }, []);
+  usePolling(() => {
+    api.ads.list().then(list => setAds(Array.isArray(list) ? list : [])).catch(() => {});
+  }, 60000);
 
   useEffect(() => {
     if (ads.length === 0) return;
@@ -20,7 +21,8 @@ export default function AdBanner() {
 
   if (ads.length === 0) return null;
 
-  const ad = ads[idx];
+  // The list can shrink on refresh while idx still points past its end
+  const ad = ads[idx % ads.length];
 
   return (
     <View style={{ marginHorizontal: r.px, marginTop: 16, borderRadius: 20,

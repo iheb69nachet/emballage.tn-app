@@ -14,7 +14,11 @@
       "Bash(grep -v \"quotes\\\\|ads\\\\|settings\\\\|tasks\\\\|products\" find /Users/ihebnachet/Desktop/emballage.tn/apps/api/src/modules/users -type f)",
       "Read(//Users/ihebnachet/Desktop/nestjs-admin/apps/api/src/**)",
       "Read(//Users/ihebnachet/Desktop/nestjs-admin/apps/web/src/features/orders/components/**)",
-      "Read(//Users/ihebnachet/Desktop/nestjs-admin/apps/web/src/lib/**)"
+      "Read(//Users/ihebnachet/Desktop/nestjs-admin/apps/web/src/lib/**)",
+      "Bash(mkdir -p /Users/ihebnachet/Desktop/emballage.tn/apps/web/src/features/notifications)",
+      "Bash(mkdir -p /Users/ihebnachet/Desktop/emballage.tn/apps/web/src/routes/_authenticated/notifications)",
+      "Bash(mkdir -p /Users/ihebnachet/Desktop/emballage.tn/apps/web/src/features/fidelity)",
+      "Bash(mkdir -p /Users/ihebnachet/Desktop/emballage.tn/apps/web/src/routes/_authenticated/fidelity)"
     ],
     "additionalDirectories": [
       "/Users/ihebnachet/Desktop/emballage.tn/apps/api/src/modules/orders/entities",
@@ -28,7 +32,14 @@
       "/Users/ihebnachet/Desktop/emballage.tn/apps/web/src/features/users/components",
       "/Users/ihebnachet/Desktop/nestjs-admin/apps/api/src/modules/orders/entities",
       "/Users/ihebnachet/Desktop/nestjs-admin/apps/web/src/features/orders/components",
-      "/Users/ihebnachet/Desktop/nestjs-admin/apps/api/src/modules/orders"
+      "/Users/ihebnachet/Desktop/nestjs-admin/apps/api/src/modules/orders",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/api/src/modules/notifications",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/api/src",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/web/src/features/notifications",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/web/src/routes/_authenticated/notifications",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/web/src/components/layout/data",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/web/src/features/fidelity",
+      "/Users/ihebnachet/Desktop/emballage.tn/apps/web/src/routes/_authenticated/fidelity"
     ]
   }
 }
